@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+config.json
+COOKIE
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Build and test output
+coverage/
+.nyc_output/
+dist/
+build/
+tmp/
+temp/
+
+# Tool caches
+.cache/
+.eslintcache
+.parcel-cache/
+
+# Local editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local/private API implementation
+src/api/

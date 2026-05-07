@@ -1,0 +1,22 @@
+{
+  "name": "sgbot",
+  "version": "1.0.0",
+  "description": "A Discord bot for the SGBot project.",
+  "license": "UNLICENSED",
+  "private": true,
+  "author": "spiider",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "deploy": "node src/deploy.js",
+    "start": "node src/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "discord.js": "^14.26.3"
+  },
+  "devDependencies": {
+    "eslint": "^10.3.0"
+  }
+}
