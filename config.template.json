@@ -1,0 +1,147 @@
+{
+    "DISCORD": {
+        "BOT": {
+            "TOKEN": "",
+            "CLIENT_ID": "1499146338611232799",
+            "GUILD_ID": "1172866164796432574"
+        },
+        "GUILD": {},
+        "BYPASS_ROLE_IDS": [
+            "1501933623354331247"
+        ]
+    },
+    "BLOXLINK": {
+        "GUILD_TOKEN": ""
+    },
+    "ROBLOX": {
+        "GROUP_ID": 33405101,
+        "BOT_USER_ID": 10505296397,
+        "COOKIE_FILE": "COOKIE",
+        "PERMISSIONS": {
+            "BYPASS_DISCORD_USER_IDS": [
+                "343751662592065537"
+            ],
+            "PROTECTED_DISCORD_ROLE_IDS": [],
+            "ROLE_POLICIES": [
+                {
+                    "DISCORD_ROLE_IDS": [
+                        "1370422527217893558",
+                        "1364047233468727296",
+                        "1323822881460715520",
+                        "1323822911240409158",
+                        "1364065195177021583",
+                        "1459606058623565975",
+                        "1172873654208565259",
+                        "1172874309287551036",
+                        "1462113524770930710",
+                        "1180701931266650212",
+                        "1172875447235780628"
+                    ],
+                    "ACTIONS": [
+                        "add-role",
+                        "remove-role",
+                        "kick"
+                    ],
+                    "TARGET_ROLE_IDS": [
+                        "251432477",
+                        "253564439",
+                        "103127204",
+                        "253424264",
+                        "252016470",
+                        "251932500",
+                        "251952590",
+                        "252802493",
+                        "252202401",
+                        "252246386",
+                        "253702414",
+                        "298766019",
+                        "393900095",
+                        "394372066",
+                        "251220490",
+                        "103127203",
+                        "252468590"
+                    ],
+                    "ASSIGNABLE_ROLE_IDS": [
+                        "251432477",
+                        "253564439",
+                        "103127204",
+                        "253424264",
+                        "252016470",
+                        "251932500",
+                        "251952590",
+                        "252802493",
+                        "252202401",
+                        "252246386",
+                        "253702414",
+                        "251220490",
+                        "103127203",
+                        "252468590"
+                    ]
+                }
+            ]
+        },
+        "ANTI_NUKE": {
+            "MUTATING": {
+                "LIMIT": 3,
+                "WINDOW_MS": 600000
+            },
+            "RANK": {
+                "LIMIT": 9999,
+                "WINDOW_MS": 600000
+            },
+            "DERANK": {
+                "LIMIT": 2,
+                "WINDOW_MS": 600000
+            },
+            "ANNOUNCE": {
+                "LIMIT": 2,
+                "WINDOW_MS": 600000
+            },
+            "READONLY": {
+                "LIMIT": 20,
+                "WINDOW_MS": 600000
+            }
+        },
+        "RULED_ROLES": {
+            "252202401": {
+                "name": "Full Access",
+                "requiredAssetId": "122987866559110",
+                "url": "https://www.roblox.com/catalog/122987866559110/SG-Full-Access-Merch"
+            },
+            "251932500": {
+                "name": "Half Access",
+                "requiredAssetId": "15531637552",
+                "url": "https://www.roblox.com/catalog/15531637552/SG-Half-Access-Merch"
+            },
+            "251952590": {
+                "name": "Certified Shoota",
+                "requiredAssetId": "15530322633",
+                "url": "https://www.roblox.com/catalog/15530322633/SG-Certified-Shoota-Merch"
+            },
+            "253424264": {
+                "name": "Steppa",
+                "requiredAssetId": "15530686434",
+                "url": "https://www.roblox.com/catalog/15530686434/SG-Steppa-Merch"
+            },
+            "251220490": {
+                "name": "Ticket Team",
+                "requiredAssetId": "15531764498",
+                "url": "https://www.roblox.com/catalog/15531764498/SG-Ticket-Team-Merch"
+            }
+        },
+        "ROLE_REQUIREMENTS": {
+            "minimumAccountAgeDays": 30,
+            "minimumBadgeCount": 35,
+            "nameSkipAssetId": "15528897591",
+            "nameSkipUrl": "https://www.roblox.com/catalog/15528897591/SG-No-Change-Name-Merch"
+        },
+        "API_KEY": "",
+        "COOKIE": ""
+    },
+    "LOGGER": {
+        "BUFFER_MAX_ENTRIES": 500,
+        "ERROR_LOG_WEBHOOK_URL": "",
+        "COMMAND_USAGE_WEBHOOK_URLS": [],
+        "SUCSESS_LOG_WEBHOOK_URLS": []
+    }
+}
