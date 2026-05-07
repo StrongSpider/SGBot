@@ -18,10 +18,11 @@ const THEME_COLOR_FAILED = 0xff0000;
 const THEME_COLOR_SUCCESS = 0x00aa00;
 const ICON_PASSED = '<:yes:1501801374353068042>';
 const ICON_FAILED = '<:no:1501801264256647298>';
+const ADD_ROLE_ASSET_ENFORCED_NAMES = new Set(['full access', 'half access']);
 
 async function evaluateAddRoleEligibility(api, target, assignRole, groupId, targetRole = null) {
   const settings = getRequirementSettings();
-  const roleRule = getRuledRoleRequirement(assignRole);
+  const roleRule = getAddRoleEnforcedRequirement(assignRole);
   const restrictedGroupIds = getRestrictedGroupIds();
   const userId = target.robloxId;
 
@@ -410,6 +411,15 @@ function getRuledRoleRequirement(assignRole) {
   };
 }
 
+function getAddRoleEnforcedRequirement(assignRole) {
+  const roleRule = getRuledRoleRequirement(assignRole);
+  if (!roleRule || !ADD_ROLE_ASSET_ENFORCED_NAMES.has(normalizeRequirementName(roleRule.name))) {
+    return null;
+  }
+
+  return roleRule;
+}
+
 function getRequirementAssetRules() {
   const assets = [];
   const settings = getRequirementSettings();
@@ -539,6 +549,13 @@ function normalizePositiveInteger(value, fallback) {
 function normalizeOptionalId(value) {
   const id = String(value || '').trim();
   return /^\d+$/.test(id) ? id : '';
+}
+
+function normalizeRequirementName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
 }
 
 module.exports = {
