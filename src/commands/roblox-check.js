@@ -1,9 +1,8 @@
 'use strict';
 
-const { MessageFlags, SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const {
   getGroupId,
-  getPolicyForMember,
   getRobloxApi,
   replyError,
   resolveRobloxUser,
@@ -25,8 +24,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      assertCanCheckAddRole(interaction);
+      await interaction.deferReply();
 
       const target = await resolveRobloxUser(interaction, interaction.options.getString('user', true));
       const api = getRobloxApi();
@@ -46,10 +44,3 @@ module.exports = {
     }
   },
 };
-
-function assertCanCheckAddRole(interaction) {
-  const policy = getPolicyForMember(interaction.member, interaction.user?.id);
-  if (!policy.allowedActions.has('add-role')) {
-    throw new Error('You do not have permission to use this Roblox command');
-  }
-}

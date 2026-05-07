@@ -1,6 +1,6 @@
 'use strict';
 
-const { MessageFlags, PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
+const { PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
 const config = require('../../config.json');
 const {
   autocompleteAssignableRoles,
@@ -54,7 +54,7 @@ module.exports = {
     let eligibility = null;
     let context = null;
     try {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.deferReply();
       targetDiscordUser = interaction.options.getUser('discord-user', true);
       const bypassChecks = interaction.options.getBoolean('bypass-checks') === true;
       if (bypassChecks && !canUseBypassChecks(interaction)) {

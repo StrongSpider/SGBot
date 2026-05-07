@@ -1,6 +1,6 @@
 'use strict';
 
-const { MessageFlags, SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const {
   autocompleteTargetRoles,
   formatRole,
@@ -44,7 +44,7 @@ module.exports = {
     let defaultRole = null;
     let context = null;
     try {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.deferReply();
       targetDiscordUser = interaction.options.getUser('discord-user', true);
       target = await resolveRobloxUser(interaction, interaction.options.getString('user', true));
       removeRole = await resolveGroupRole(interaction.options.getString('role-name', true));
