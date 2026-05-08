@@ -23,14 +23,18 @@ module.exports = async function interactionCreateHandler(interaction) {
     : interaction.client.commands.get(interaction.commandName);
   if (!command) {
     if (isAutocomplete) {
-      await interaction.respond([]).catch(() => {});
+      await interaction.respond([]).catch((err) => {
+        logInteractionResponseError('send autocomplete fallback for unknown command', err);
+      });
       return;
     }
 
     await interaction.reply({
       content: 'Unknown command.',
       flags: MessageFlags.Ephemeral,
-    }).catch(() => {});
+    }).catch((err) => {
+      logInteractionResponseError('reply to unknown command', err);
+    });
     return;
   }
 
@@ -56,10 +60,12 @@ module.exports = async function interactionCreateHandler(interaction) {
   } catch (err) {
     const message = err?.message || String(err);
     const label = isComponent ? interaction.customId : interaction.commandName;
-    logger.error(`Command ${label} failed: ${message}`);
+    logger.error(`Command ${label} failed:`, err);
 
     if (isAutocomplete) {
-      await interaction.respond([]).catch(() => {});
+      await interaction.respond([]).catch((replyErr) => {
+        logInteractionResponseError(`send autocomplete error fallback for ${label}`, replyErr);
+      });
       return;
     }
 
@@ -69,12 +75,20 @@ module.exports = async function interactionCreateHandler(interaction) {
     };
 
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: payload.content }).catch(() => {});
+      await interaction.editReply({ content: payload.content }).catch((replyErr) => {
+        logInteractionResponseError(`edit error response for ${label}`, replyErr);
+      });
     } else {
-      await interaction.reply(payload).catch(() => {});
+      await interaction.reply(payload).catch((replyErr) => {
+        logInteractionResponseError(`send error response for ${label}`, replyErr);
+      });
     }
   }
 };
+
+function logInteractionResponseError(context, err) {
+  logger.error(`Failed to ${context}:`, err);
+}
 
 function getComponentCommand(interaction) {
   const customId = String(interaction.customId || '');

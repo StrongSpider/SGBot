@@ -10,6 +10,8 @@ const {
 
 const config = require('../../../config.json');
 const restrictedGroups = require('../../../RESTRICTED_GROUPS.json');
+const LoggerClass = require('../../api/logger');
+const logger = new LoggerClass('RoleEligibility', 'BOT');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_MINIMUM_ACCOUNT_AGE_DAYS = 30;
@@ -56,6 +58,7 @@ async function evaluateAddRoleEligibility(api, target, assignRole, groupId, targ
   checks.push(buildDisplayNameCheck(profileResult, nameSkipResult));
   checks.push(buildAccountAgeCheck(profileResult, settings.minimumAccountAgeDays));
   checks.push(buildBadgeCountCheck(badgeResult, settings.minimumBadgeCount));
+  appendInventoryVisibilityCheck(checks, nameSkipResult, roleAssetResult);
 
   const memberships = membershipsResult.ok ? membershipsResult.value : [];
   checks.push(buildMainGroupCheck(membershipsResult, memberships, groupId, targetRole));
@@ -99,8 +102,9 @@ async function evaluateRequirementAssetOwnership(api, target) {
     return {
       ...asset,
       owned,
-      status: result.ok ? (owned ? 'owned' : 'missing') : 'failed',
+      status: result.ok ? (owned ? 'owned' : 'missing') : getOwnershipFailureStatus(result),
       error: result.ok ? '' : result.error,
+      reason: result.reason || '',
     };
   }));
 
@@ -108,7 +112,8 @@ async function evaluateRequirementAssetOwnership(api, target) {
     items,
     ownedItems: items.filter((item) => item.status === 'owned'),
     missingItems: items.filter((item) => item.status === 'missing'),
-    failedItems: items.filter((item) => item.status === 'failed'),
+    failedItems: items.filter((item) => item.status === 'failed' || item.status === 'private'),
+    privateItems: items.filter((item) => item.status === 'private'),
   };
 }
 
@@ -156,9 +161,10 @@ function renderAddRoleEligibilityResponse({ target, role, result, title, summary
 }
 
 function renderAddRoleCheckResponse({ target, result, shirts }) {
-  const failedChecks = result.failedChecks || [];
-  const passedChecks = result.passedChecks || [];
-  const totalChecks = result.checks.length;
+  const displayResult = withPrivateInventoryOwnershipCheck(result, shirts);
+  const failedChecks = displayResult.failedChecks || [];
+  const passedChecks = displayResult.passedChecks || [];
+  const totalChecks = displayResult.checks.length;
   const allowed = failedChecks.length === 0;
   const container = new ContainerBuilder()
     .setAccentColor(allowed ? THEME_COLOR_SUCCESS : THEME_COLOR_FAILED)
@@ -203,6 +209,35 @@ function renderAddRoleCheckResponse({ target, result, shirts }) {
     components: [container],
     allowedMentions: { parse: [] },
   };
+}
+
+function withPrivateInventoryOwnershipCheck(result, ownership) {
+  const checks = Array.isArray(result?.checks) ? result.checks : [];
+  if (!hasPrivateInventoryItems(ownership) || hasCheck(checks, 'Inventory Visibility')) {
+    return result;
+  }
+
+  const nextChecks = [
+    ...checks,
+    failCheck('Inventory Visibility', 'Private inventory'),
+  ];
+
+  return {
+    ...result,
+    allowed: false,
+    checks: nextChecks,
+    failedChecks: nextChecks.filter((check) => !check.passed),
+    passedChecks: nextChecks.filter((check) => check.passed),
+  };
+}
+
+function hasPrivateInventoryItems(ownership) {
+  const items = Array.isArray(ownership?.items) ? ownership.items : [];
+  return items.some((item) => item.status === 'private' || item.reason === 'private-inventory');
+}
+
+function hasCheck(checks, label) {
+  return checks.some((check) => check.label === label);
 }
 
 function buildEligibilityLogFields(result) {
@@ -252,7 +287,10 @@ function buildDisplayNameCheck(profileResult, nameSkipResult) {
   }
 
   if (!nameSkipResult.ok) {
-    return failCheck('Display Name ("SG")', `Missing SG; name skip lookup failed: ${nameSkipResult.error}`);
+    const detail = isPrivateInventoryLookup(nameSkipResult)
+      ? 'inventory is private'
+      : `name skip lookup failed: ${nameSkipResult.error}`;
+    return failCheck('Display Name ("SG")', `Missing SG; ${detail}`);
   }
 
   return failCheck('Display Name ("SG")', 'Missing SG');
@@ -322,7 +360,9 @@ async function buildRestrictedGroupsCheck(api, membershipsResult, memberships, r
 function buildRoleAssetCheck(roleRule, roleAssetResult) {
   const label = `${roleRule.name} Merch`;
   if (!roleAssetResult.ok) {
-    return failCheck(label, `Ownership lookup failed: ${roleAssetResult.error}`);
+    return failCheck(label, isPrivateInventoryLookup(roleAssetResult)
+      ? 'Inventory is private'
+      : `Ownership lookup failed: ${roleAssetResult.error}`);
   }
 
   return roleAssetResult.value === true
@@ -335,6 +375,7 @@ function formatShirtOwnershipSection(ownership) {
   const ownedItems = items.filter((item) => item.status === 'owned');
   const missingItems = items.filter((item) => item.status === 'missing');
   const failedItems = items.filter((item) => item.status === 'failed');
+  const privateItems = items.filter((item) => item.status === 'private');
   const lines = ['**Shirts:**'];
 
   if (items.length === 0) {
@@ -342,7 +383,7 @@ function formatShirtOwnershipSection(ownership) {
     return lines.join('\n');
   }
 
-  if (ownedItems.length === 0 && failedItems.length === 0) {
+  if (ownedItems.length === 0 && failedItems.length === 0 && privateItems.length === 0) {
     lines.push(`${ICON_FAILED} **User owns no shirts**`);
     return lines.join('\n');
   }
@@ -353,6 +394,10 @@ function formatShirtOwnershipSection(ownership) {
 
   for (const item of missingItems) {
     lines.push(`${ICON_FAILED} **${item.name}:** ${inlineCode('Not owned')}`);
+  }
+
+  for (const item of privateItems) {
+    lines.push(`${ICON_FAILED} **${item.name}:** ${inlineCode('Private inventory')}`);
   }
 
   for (const item of failedItems) {
@@ -369,8 +414,8 @@ async function getRestrictedGroupName(api, membership) {
     if (name) {
       return name;
     }
-  } catch {
-    // Fall back to the membership payload below.
+  } catch (err) {
+    logger.error('Caught restricted group name lookup error:', err);
   }
 
   return String(membership?.group?.name || groupId || 'Unknown group').trim();
@@ -476,11 +521,29 @@ async function captureLookup(fn) {
       value: await fn(),
     };
   } catch (err) {
+    logger.error('Caught Roblox eligibility lookup error:', err);
     return {
       ok: false,
       error: formatLookupError(err),
+      reason: getLookupFailureReason(err),
     };
   }
+}
+
+function appendInventoryVisibilityCheck(checks, ...results) {
+  if (!results.some(isPrivateInventoryLookup)) {
+    return;
+  }
+
+  checks.push(failCheck('Inventory Visibility', 'Private inventory'));
+}
+
+function getOwnershipFailureStatus(result) {
+  return isPrivateInventoryLookup(result) ? 'private' : 'failed';
+}
+
+function isPrivateInventoryLookup(result) {
+  return result?.reason === 'private-inventory';
 }
 
 function passCheck(label, value) {
@@ -536,6 +599,49 @@ function formatLookupError(err) {
     .replace(/\s+/g, ' ')
     .trim();
   return message.length <= 120 ? message : `${message.slice(0, 117)}...`;
+}
+
+function getLookupFailureReason(err) {
+  if (isPrivateInventoryError(err)) {
+    return 'private-inventory';
+  }
+  return '';
+}
+
+function isPrivateInventoryError(err) {
+  const operation = String(err?.operation || '').toLowerCase();
+  const status = Number(err?.status);
+  const detail = [
+    err?.message,
+    ...getErrorBodyMessages(err?.body),
+  ].join(' ').toLowerCase();
+
+  return operation === 'inventory.userownsasset' &&
+    status === 403 &&
+    /private|forbidden|permission|not authorized|not allowed|cannot view|can't view|access denied/.test(detail);
+}
+
+function getErrorBodyMessages(body) {
+  if (!body) {
+    return [];
+  }
+
+  if (typeof body === 'string') {
+    return [body];
+  }
+
+  if (Array.isArray(body.errors)) {
+    return body.errors
+      .flatMap((entry) => [
+        entry?.message,
+        entry?.userFacingMessage,
+        entry?.code,
+      ])
+      .filter(Boolean)
+      .map((value) => String(value));
+  }
+
+  return [JSON.stringify(body)];
 }
 
 function normalizePositiveInteger(value, fallback) {

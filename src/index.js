@@ -54,13 +54,11 @@ function loadCommands() {
           logger.warn(`Command file missing data or execute: ${ filePath}`);
         }
       } catch (e) {
-        const msg = e && e.message ? e.message : String(e);
-        logger.error(`Failed to load command ${ filePath } - ${ msg}`);
+        logger.error(`Failed to load command ${ filePath }:`, e);
       }
     }
   } catch (e) {
-    const msg = e && e.message ? e.message : String(e);
-    logger.error(`Failed to scan commands directory: ${ msg}`);
+    logger.error('Failed to scan commands directory:', e);
   }
   logger.info(`Loaded commands: ${ count}`);
 }
@@ -90,14 +88,12 @@ function loadEventHandlers() {
             logger.warn(`Event file does not export a function: ${ filePath}`);
             return null;
           } catch (e) {
-            const msg = e && e.message ? e.message : String(e);
-            logger.error(`Failed to load event file ${ filePath } - ${ msg}`);
+            logger.error(`Failed to load event file ${ filePath }:`, e);
             return null;
           }
         }).filter(Boolean);
       } catch (e) {
-        const msg = e && e.message ? e.message : String(e);
-        logger.error(`Failed to read event folder ${ folderPath } - ${ msg}`);
+        logger.error(`Failed to read event folder ${ folderPath }:`, e);
         handlers = [];
       }
 
@@ -106,8 +102,7 @@ function loadEventHandlers() {
       client.on(eventName, async (...args) => {
         for (const handler of handlers) {
           try { await handler(...args); } catch (e) {
-            const msg = e && e.message ? e.message : String(e);
-            logger.error(`Event handler for ${ eventName } threw: ${ msg}`);
+            logger.error(`Event handler for ${ eventName } threw:`, e);
           }
         }
       });
@@ -115,8 +110,7 @@ function loadEventHandlers() {
       totalEvents += handlers.length;
     }
   } catch (e) {
-    const msg = e && e.message ? e.message : String(e);
-    logger.error(`Failed to scan events directory: ${ msg}`);
+    logger.error('Failed to scan events directory:', e);
   }
   logger.info(`Loaded event handlers: ${ totalEvents}`);
 }

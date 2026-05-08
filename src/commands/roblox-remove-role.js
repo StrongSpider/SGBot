@@ -66,7 +66,7 @@ module.exports = {
         throw new Error(`${target.label} is already in the default Roblox role`);
       }
 
-      await context.api.unassignMemberRole(context.groupId, target.robloxId, removeRole.id);
+      await context.api.setMemberRole(context.groupId, target.robloxId, defaultRole.id);
       logCommandAction(interaction, {
         action: 'remove-role',
         commandName: 'roblox-remove-role',

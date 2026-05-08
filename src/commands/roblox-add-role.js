@@ -105,7 +105,7 @@ module.exports = {
       }
 
       consumeMutationCooldown(interaction.user.id, 'add-role', context.targetRole, context.assignRole);
-      await context.api.assignMemberRole(context.groupId, target.robloxId, context.assignRole.id);
+      await context.api.setMemberRole(context.groupId, target.robloxId, context.assignRole.id);
       logCommandAction(interaction, {
         action: 'add-role',
         commandName: 'roblox-add-role',

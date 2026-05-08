@@ -11,7 +11,11 @@ const logger = new LoggerClass('ReadyHandler', 'BOT');
 module.exports = async function readyHandler(client) {
   let guild = client.guilds.cache.get(config.DISCORD.BOT.GUILD_ID);
   if (!guild) {
-    try { guild = await client.guilds.fetch(config.DISCORD.BOT.GUILD_ID); } catch { }
+    try {
+      guild = await client.guilds.fetch(config.DISCORD.BOT.GUILD_ID);
+    } catch (err) {
+      logger.error('Failed to fetch configured guild:', err);
+    }
   }
 
   if (!guild) {

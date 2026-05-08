@@ -17,6 +17,7 @@ const {
 } = require('../../api/bloxlink');
 const { toArray } = require('../../api/roblox/helpers');
 const LoggerClass = require('../../api/logger');
+const logger = new LoggerClass('RobloxCommands', 'BOT');
 
 const ALL_ACTIONS = Object.freeze([
   'add-role',
@@ -170,7 +171,10 @@ async function autocompleteRoles(interaction, action, valueMode, predicate) {
   }
 
   const focused = normalizeAutocompleteQuery(interaction.options.getFocused());
-  const roles = await getGroupRoles().catch(() => []);
+  const roles = await getGroupRoles().catch((err) => {
+    logCaughtError(`Caught ${action} autocomplete role fetch error`, err);
+    return [];
+  });
   const choices = roles
     .filter((role) => predicate(role, policy))
     .filter((role) => matchesRoleAutocomplete(role, focused))
@@ -223,7 +227,10 @@ async function prepareUserMutation(interaction, action, target, options = {}) {
       throw new Error('No Roblox group role found for that selection');
     }
   }
-  const targetRole = await api.getUserGroupRole(groupId, target.robloxId).catch(() => null);
+  const targetRole = await api.getUserGroupRole(groupId, target.robloxId).catch((err) => {
+    logCaughtError(`Caught ${action} target role lookup error`, err);
+    return null;
+  });
 
   if (!targetRole && options.requireGroupMembership) {
     throw new Error('Target user is not in the configured Roblox group');
@@ -330,10 +337,16 @@ async function assertDiscordTargetAllowed(interaction, target, policy) {
     throw new Error('You cannot use this command on yourself');
   }
 
-  const targetMember = await interaction.guild.members.fetch(target.discordId).catch(() => null);
+  const targetMember = await interaction.guild.members.fetch(target.discordId).catch((err) => {
+    logCaughtError('Caught Discord target member fetch error', err);
+    return null;
+  });
   const executorMember = interaction.member?.roles?.highest
     ? interaction.member
-    : await interaction.guild.members.fetch(interaction.user.id).catch(() => interaction.member);
+    : await interaction.guild.members.fetch(interaction.user.id).catch((err) => {
+      logCaughtError('Caught Discord executor member fetch error', err);
+      return interaction.member;
+    });
   if (!targetMember || !executorMember?.roles?.highest) {
     return;
   }
@@ -589,6 +602,11 @@ function toErrorMessage(err) {
   return err?.message ? err.message : String(err);
 }
 
+function logCaughtError(context, err) {
+  const label = String(context || 'Caught error').trim() || 'Caught error';
+  logger.error(`${label}:`, err);
+}
+
 function logCommandAction(interaction, details = {}) {
   if (!interaction) {
     return;
@@ -678,6 +696,9 @@ function formatCommandActionRole(role) {
 }
 
 async function replyError(interaction, err, logDetails = null) {
+  const commandName = String(logDetails?.commandName || interaction?.commandName || 'command').trim();
+  logCaughtError(`Caught error in ${commandName}`, err);
+
   if (logDetails) {
     logCommandAction(interaction, {
       ...logDetails,
@@ -706,6 +727,7 @@ module.exports = {
   getRobloxApi,
   isCommandPermissionAdmin,
   isSameRole,
+  logCaughtError,
   logCommandAction,
   prepareUserMutation,
   replyError,

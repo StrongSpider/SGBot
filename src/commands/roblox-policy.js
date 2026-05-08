@@ -24,6 +24,7 @@ const {
   isCommandPermissionAdmin,
   getRobloxApi,
   logCommandAction,
+  logCaughtError,
   replyError,
 } = require('./roblox/shared');
 
@@ -623,7 +624,10 @@ async function getGuildRoleNameMap(guild) {
     return map;
   }
 
-  await guild.roles.fetch().catch(() => null);
+  await guild.roles.fetch().catch((err) => {
+    logCaughtError('Caught Discord role list fetch error', err);
+    return null;
+  });
   for (const [roleId, role] of guild.roles.cache) {
     map.set(roleId, role.name);
   }
@@ -845,13 +849,19 @@ function toStringArray(value) {
 }
 
 async function replyComponentError(interaction, err) {
+  logCaughtError('Caught roblox-policy component error', err);
+
   const content = `Error: ${err?.message || String(err)}`;
   if (interaction.deferred || interaction.replied) {
-    await interaction.editReply({ content }).catch(() => {});
+    await interaction.editReply({ content }).catch((replyErr) => {
+      logCaughtError('Caught roblox-policy component error response failure', replyErr);
+    });
     return;
   }
 
   if (typeof interaction.reply === 'function') {
-    await interaction.reply({ content, flags: MessageFlags.Ephemeral }).catch(() => {});
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral }).catch((replyErr) => {
+      logCaughtError('Caught roblox-policy component error response failure', replyErr);
+    });
   }
 }
