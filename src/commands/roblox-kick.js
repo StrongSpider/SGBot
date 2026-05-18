@@ -37,6 +37,7 @@ module.exports = {
         target,
       });
       await interaction.editReply({ content: `Kicked ${target.label} (${target.robloxId}) from the Roblox group.` });
+      return true;
     } catch (err) {
       await replyError(interaction, err, {
         action: 'kick',
@@ -44,6 +45,7 @@ module.exports = {
         startedAt,
         target,
       });
+      return false;
     }
   },
 };

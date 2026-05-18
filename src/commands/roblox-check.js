@@ -39,8 +39,10 @@ module.exports = {
         result: eligibility,
         shirts,
       }));
+      return true;
     } catch (err) {
       await replyError(interaction, err);
+      return false;
     }
   },
 };

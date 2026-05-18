@@ -59,8 +59,10 @@ module.exports = {
 
       const session = await createSession(interaction);
       await interaction.editReply(renderEditor(session));
+      return true;
     } catch (err) {
       await replyError(interaction, err);
+      return false;
     }
   },
 

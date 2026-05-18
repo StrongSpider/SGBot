@@ -28,6 +28,7 @@ const ALL_ACTIONS = Object.freeze([
 ]);
 
 const ROLE_CACHE_TTL_MS = 60000;
+const MAX_AUTOCOMPLETE_CHOICE_LENGTH = 100;
 const ACTION_ALIASES = Object.freeze({
   rank: ['add-role', 'remove-role'],
 });
@@ -160,17 +161,21 @@ async function autocompleteAssignableRoles(interaction, valueMode = 'id', action
   return autocompleteRoles(interaction, action, valueMode, isAssignableRole);
 }
 
-async function autocompleteTargetRoles(interaction, valueMode = 'id', action = 'remove-role') {
-  return autocompleteRoles(interaction, action, valueMode, isTargetRole);
+async function autocompleteTargetRoles(interaction, valueMode = 'id', action = 'remove-role', options = {}) {
+  return autocompleteRoles(interaction, action, valueMode, isTargetRole, options);
 }
 
-async function autocompleteRoles(interaction, action, valueMode, predicate) {
+async function autocompleteRoles(interaction, action, valueMode, predicate, options = {}) {
   const policy = getPolicyForMember(interaction.member, interaction.user?.id);
   if (!policy.allowedActions.has(action)) {
     return interaction.respond([]);
   }
 
-  const focused = normalizeAutocompleteQuery(interaction.options.getFocused());
+  const focusedValue = interaction.options.getFocused();
+  const focusedPart = options.allowList
+    ? getRoleListAutocompletePart(focusedValue)
+    : { prefix: '', query: focusedValue };
+  const focused = normalizeAutocompleteQuery(focusedPart.query);
   const roles = await getGroupRoles().catch((err) => {
     logCaughtError(`Caught ${action} autocomplete role fetch error`, err);
     return [];
@@ -180,10 +185,8 @@ async function autocompleteRoles(interaction, action, valueMode, predicate) {
     .filter((role) => matchesRoleAutocomplete(role, focused))
     .sort((a, b) => Number(a.rank || 0) - Number(b.rank || 0))
     .slice(0, 25)
-    .map((role) => ({
-      name: formatRoleChoiceName(role),
-      value: formatRoleChoiceValue(role, valueMode),
-    }));
+    .map((role) => formatRoleAutocompleteChoice(role, valueMode, options, focusedPart))
+    .filter(Boolean);
 
   return interaction.respond(choices);
 }
@@ -194,14 +197,66 @@ async function resolveGroupRole(value) {
     throw new Error('Roblox role is required');
   }
 
-  const roles = await getGroupRoles();
-  const lower = raw.toLowerCase();
-  const byName = roles.find((role) => String(role?.name || role?.displayName || '').trim().toLowerCase() === lower);
-  if (byName) {
-    return byName;
+  const role = findGroupRoleByName(await getGroupRoles(), raw);
+  if (role) {
+    return role;
   }
 
   throw new Error('No Roblox group role found for that name');
+}
+
+async function resolveGroupRoles(value) {
+  const roleNames = parseGroupRoleList(value);
+  if (roleNames.length === 0) {
+    throw new Error('At least one Roblox role is required');
+  }
+
+  const roles = await getGroupRoles();
+  return dedupeGroupRoles(roleNames.map((roleName) => {
+    const role = findGroupRoleByName(roles, roleName);
+    if (!role) {
+      throw new Error(`No Roblox group role found for \`${roleName}\``);
+    }
+    return role;
+  }));
+}
+
+function findGroupRoleByName(roles, value) {
+  const lower = String(value || '').trim().toLowerCase();
+  return roles.find((role) => String(role?.name || role?.displayName || '').trim().toLowerCase() === lower) || null;
+}
+
+function parseGroupRoleList(value) {
+  return String(value || '')
+    .split(/[,;\n]+/)
+    .map((roleName) => roleName.trim())
+    .filter(Boolean);
+}
+
+function dedupeGroupRoles(roles) {
+  const seen = new Set();
+  return roles.filter((role) => {
+    const key = getRoleIdentityKey(role);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function getRoleIdentityKey(role) {
+  const id = String(role?.id || '').trim();
+  if (id) {
+    return `id:${id}`;
+  }
+
+  const rank = Number(role?.rank);
+  if (Number.isFinite(rank)) {
+    return `rank:${rank}`;
+  }
+
+  return `name:${formatRole(role).toLowerCase()}`;
 }
 
 function getDefaultGroupRole(roles) {
@@ -557,6 +612,15 @@ function normalizeAutocompleteQuery(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function getRoleListAutocompletePart(value) {
+  const raw = String(value || '');
+  const match = raw.match(/^(.*[,;\n]\s*)([^,;\n]*)$/s);
+  if (!match) {
+    return { prefix: '', query: raw };
+  }
+  return { prefix: match[1], query: match[2] };
+}
+
 function getRoleAutocompleteSearchValues(role) {
   return [
     role?.name,
@@ -572,6 +636,21 @@ function formatRoleChoiceName(role) {
   return String(role?.name || 'Unnamed role').trim() || 'Unnamed role';
 }
 
+function formatRoleAutocompleteChoice(role, valueMode, options, focusedPart) {
+  const name = formatRoleChoiceName(role);
+  const value = formatRoleChoiceValue(role, valueMode);
+  if (!options.allowList) {
+    return { name, value };
+  }
+
+  const listValue = formatRoleListChoiceValue(focusedPart.prefix, value);
+  if (listValue.length > MAX_AUTOCOMPLETE_CHOICE_LENGTH) {
+    return null;
+  }
+
+  return { name: listValue, value: listValue };
+}
+
 function formatRoleChoiceValue(role, valueMode) {
   if (valueMode === 'rank') {
     return Number(role.rank);
@@ -580,6 +659,10 @@ function formatRoleChoiceValue(role, valueMode) {
     return String(role.id);
   }
   return formatRoleChoiceName(role);
+}
+
+function formatRoleListChoiceValue(prefix, value) {
+  return `${prefix}${String(value || '').trim()}`;
 }
 
 function formatRole(role) {
@@ -732,5 +815,6 @@ module.exports = {
   prepareUserMutation,
   replyError,
   resolveGroupRole,
+  resolveGroupRoles,
   resolveRobloxUser,
 };

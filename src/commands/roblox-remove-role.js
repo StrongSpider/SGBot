@@ -10,7 +10,7 @@ const {
   logCommandAction,
   prepareUserMutation,
   replyError,
-  resolveGroupRole,
+  resolveGroupRoles,
   resolveRobloxUser,
 } = require('./roblox/shared');
 
@@ -28,18 +28,19 @@ module.exports = {
       .setRequired(true))
     .addStringOption((option) => option
       .setName('role-name')
-      .setDescription('Roblox group role name to remove')
+      .setDescription('Roblox group role name(s) to remove, separated by commas')
       .setRequired(true)
       .setAutocomplete(true)),
 
   async autocomplete(interaction) {
-    return autocompleteTargetRoles(interaction, 'name', 'remove-role');
+    return autocompleteTargetRoles(interaction, 'name', 'remove-role', { allowList: true });
   },
 
   async execute(interaction) {
     const startedAt = Date.now();
     let target = null;
     let targetDiscordUser = null;
+    let removeRoles = [];
     let removeRole = null;
     let defaultRole = null;
     let context = null;
@@ -47,7 +48,7 @@ module.exports = {
       await interaction.deferReply();
       targetDiscordUser = interaction.options.getUser('discord-user', true);
       target = await resolveRobloxUser(interaction, interaction.options.getString('user', true));
-      removeRole = await resolveGroupRole(interaction.options.getString('role-name', true));
+      removeRoles = await resolveGroupRoles(interaction.options.getString('role-name', true));
       defaultRole = getDefaultGroupRole(await getGroupRoles());
       if (!defaultRole) {
         throw new Error('No default Roblox group role was found');
@@ -58,8 +59,9 @@ module.exports = {
         requireGroupMembership: true,
       });
 
-      if (!isSameRole(context.targetRole, removeRole)) {
-        throw new Error(`${target.label} has Roblox role \`${formatRole(context.targetRole)}\`, not \`${formatRole(removeRole)}\``);
+      removeRole = removeRoles.find((role) => isSameRole(context.targetRole, role)) || null;
+      if (!removeRole) {
+        throw new Error(buildRoleMismatchMessage(target, context.targetRole, removeRoles));
       }
 
       if (isSameRole(context.targetRole, defaultRole)) {
@@ -79,6 +81,7 @@ module.exports = {
       await interaction.editReply({
         content: `Removed Roblox role \`${formatRole(removeRole)}\` from ${target.label} (${target.robloxId}).`,
       });
+      return true;
     } catch (err) {
       await replyError(interaction, err, {
         action: 'remove-role',
@@ -86,8 +89,34 @@ module.exports = {
         startedAt,
         target,
         targetDiscordId: targetDiscordUser?.id,
-        role: removeRole,
+        role: removeRole || getSingleLogRole(removeRoles),
+        fields: buildRemoveRolesLogFields(removeRoles),
       });
+      return false;
     }
   },
 };
+
+function buildRoleMismatchMessage(target, targetRole, removeRoles) {
+  if (removeRoles.length === 1) {
+    return `${target.label} has Roblox role \`${formatRole(targetRole)}\`, not \`${formatRole(removeRoles[0])}\``;
+  }
+
+  return `${target.label} has Roblox role \`${formatRole(targetRole)}\`, not one of ${formatRoleList(removeRoles)}`;
+}
+
+function formatRoleList(roles) {
+  return roles.map((role) => `\`${formatRole(role)}\``).join(', ');
+}
+
+function getSingleLogRole(roles) {
+  return roles.length === 1 ? roles[0] : null;
+}
+
+function buildRemoveRolesLogFields(roles) {
+  if (roles.length <= 1) {
+    return [];
+  }
+
+  return [{ name: 'Roles', value: roles.map((role) => formatRole(role)).join(', '), inline: false }];
+}

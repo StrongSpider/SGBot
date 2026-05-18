@@ -127,6 +127,11 @@
                 "name": "Ticket Team",
                 "requiredAssetId": "15531764498",
                 "url": "https://www.roblox.com/catalog/15531764498/SG-Ticket-Team-Merch"
+            },
+            "697185006": {
+                "name": "1 Tap Access",
+                "requiredAssetId": "15531026606",
+                "url": "https://www.roblox.com/catalog/15531026606/SG-1-tap-access"
             }
         },
         "ROLE_REQUIREMENTS": {

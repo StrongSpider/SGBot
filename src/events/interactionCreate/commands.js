@@ -2,6 +2,7 @@
 
 const { MessageFlags } = require('discord.js');
 
+const { recordSuccessfulCommandUsage } = require('../../commandUsage');
 const LoggerClass = require('../../api/logger');
 const logger = new LoggerClass('InteractionHandler', 'BOT');
 
@@ -56,7 +57,12 @@ module.exports = async function interactionCreateHandler(interaction) {
       return;
     }
 
-    await command.execute(interaction);
+    const successful = await command.execute(interaction);
+    if (successful === true) {
+      await recordSuccessfulCommandUsage(interaction, interaction.commandName).catch((recordErr) => {
+        logger.error(`Failed to record successful command usage for ${interaction.commandName}:`, recordErr);
+      });
+    }
   } catch (err) {
     const message = err?.message || String(err);
     const label = isComponent ? interaction.customId : interaction.commandName;

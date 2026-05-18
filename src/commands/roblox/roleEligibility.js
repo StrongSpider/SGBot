@@ -20,7 +20,7 @@ const THEME_COLOR_FAILED = 0xff0000;
 const THEME_COLOR_SUCCESS = 0x00aa00;
 const ICON_PASSED = '<:yes:1501801374353068042>';
 const ICON_FAILED = '<:no:1501801264256647298>';
-const ADD_ROLE_ASSET_ENFORCED_NAMES = new Set(['full access', 'half access']);
+const ADD_ROLE_ASSET_ENFORCED_NAMES = new Set(['full access', 'half access', '1 tap access']);
 
 async function evaluateAddRoleEligibility(api, target, assignRole, groupId, targetRole = null) {
   const settings = getRequirementSettings();

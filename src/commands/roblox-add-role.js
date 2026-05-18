@@ -101,7 +101,7 @@ module.exports = {
           role: context.assignRole,
           result: eligibility,
         }));
-        return;
+        return false;
       }
 
       consumeMutationCooldown(interaction.user.id, 'add-role', context.targetRole, context.assignRole);
@@ -119,6 +119,7 @@ module.exports = {
       await interaction.editReply({
         content: `Added Roblox role \`${formatRole(context.assignRole)}\` to ${target.label} (${target.robloxId}).`,
       });
+      return true;
     } catch (err) {
       await replyError(interaction, err, {
         action: 'add-role',
@@ -129,6 +130,7 @@ module.exports = {
         role: context?.assignRole || assignRole,
         fields: buildEligibilityLogFields(eligibility),
       });
+      return false;
     }
   },
 };

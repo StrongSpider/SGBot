@@ -35,6 +35,7 @@ module.exports = {
         target,
       });
       await interaction.editReply({ content: `Banned ${target.label} (${target.robloxId}) from the Roblox group.` });
+      return true;
     } catch (err) {
       await replyError(interaction, err, {
         action: 'ban',
@@ -42,6 +43,7 @@ module.exports = {
         startedAt,
         target,
       });
+      return false;
     }
   },
 };
